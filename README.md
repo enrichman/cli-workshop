@@ -4,7 +4,6 @@ In this section we are going to use the `net/http` package, and call an external
 Let's try to fetch some information of a Github user.
 
 To do so we can use the `http.Get` func.  
-
 This will return an http.Response, or an error
 
 
