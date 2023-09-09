@@ -1,60 +1,54 @@
-# Section 01
+# Section 02
 
-Welcome! This is the first section, and we are going through some basic steps to set you up and running.
+In this section we are going to use the `net/http` package, and call an external API.  
+Let's try to fetch some information of a Github user.
 
-You should already have installed Go. If not, please follow the official guide [here](https://go.dev/doc/install).
+To do so we can use the `http.Get` func.  
 
-And now let's see if everything works!
+This will return an http.Response, or an error
 
-## Let's start!
-
-Create a `main.go` file that will print the classic Hello World!
 
 ```go
-package main
-
-import "fmt"
-
-func main() {
-	fmt.Println("Hello world!")
+resp, err := http.Get("https://api.github.com/users/enrichman")
+if err != nil {
+	log.Fatal(err)
 }
 ```
 
-and run `go run main.go`. You should see:
+If everything was fine, we can try to read the body from the response with the io.ReadAll
 
-```
-> % go run main.go
-Hello world!
-```
-
-Awesome!
-
-## Go modules
-
-Modules are how Go manages dependencies.
-
-If you want to know more about them you can have a read at the official documentation [here](https://go.dev/ref/mod).
-
-For now it's enough to know that to set them you you will need to run just a `go mod init <mypackage>`:
-
-```
-go mod init github.com/enrichman/cli-workshop
+```go
+bodyBytes, err := io.ReadAll(resp.Body)
+if err != nil {
+	log.Fatal(err)
+}
 ```
 
-Now you should habe a `go.mod` file in your folder.
+unmarshal the JSON into a generic `map[string]any`
 
-Some more useful commands that you should know about modules and dependencies are
-- `go mod tidy` to cleanup your dependencies
-- `go get <package>` to get/download a dependency
-
-For example we can try to download Cobra running
-
-```
-go get github.com/spf13/cobra
+```go
+var user map[string]any
+err = json.Unmarshal(bodyBytes, &user)
+if err != nil {
+	log.Fatal(err)
+}
 ```
 
-This will download `spf13/cobra`, its dependencies, and it will change the `go.mod` accordingly.
-It will also create a `go.sum` file with the checksums of these libraries.
+and print some information about it
 
-We can now run a `go mod tidy` that will cleanup the `go.mod`, because in our project we are not using Cobra yet.
-We can delete the empty `go.sum` as well.
+```go
+fmt.Printf("User '%v' (%v) found\n", user["login"], user["name"])
+```
+
+## Wrap up
+
+We have used some common functions of the standard library.
+
+### Bonus
+
+After getting the response body you should call the `Close()` method. You can do this in a `defer`.  
+The deferred functions will be called when the surrounding function returns.
+
+```
+defer resp.Body.Close()
+```
