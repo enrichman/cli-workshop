@@ -1,53 +1,106 @@
-# Section 02
+# Section 03
 
-In this section we are going to use the `net/http` package, and call an external API.  
-Let's try to fetch some information of a Github user.
+Now let's cleanup a bit the code, and move this into a GithubService.
 
-To do so we can use the `http.Get` func.  
-This will return an http.Response, or an error
+Create a `service.go` file, and a struct that will help us calling the Github APIs.
 
+```
+type GithubService struct{}
+```
+
+This service will have a `GetUser` method that will return a `User` struct, or an error:
+
+The user will be defined as
 
 ```go
-resp, err := http.Get("https://api.github.com/users/enrichman")
-if err != nil {
-	log.Fatal(err)
+type User struct {
+	Username string
+	Name     string
 }
 ```
 
-If everything was fine, we can try to read the body from the response with the io.ReadAll
+and the method GetUser
 
 ```go
-bodyBytes, err := io.ReadAll(resp.Body)
-if err != nil {
-	log.Fatal(err)
+func (s *GithubService) GetUser(username string) (*User, error) {
+	// TODO
 }
 ```
 
-unmarshal the JSON into a generic `map[string]any`
+Let's copy paste all the code in the `main()` func, and put it in the `GetUser`. Then let's refactor it a bit.
+
+1) Format the URL to get the username from the argument of the method
 
 ```go
-var user map[string]any
-err = json.Unmarshal(bodyBytes, &user)
-if err != nil {
-	log.Fatal(err)
+url := fmt.Sprintf("https://api.github.com/users/%s", username)
+resp, err := http.Get(url)
+```
+
+1) Handle the errors from the `log.Fatal`
+
+```go
+return nil, fmt.Errorf("getting user: %w", err)
+```
+
+2) returning a User in case of success
+
+```go
+return &User{
+	Username: user["login"],
+	Name:     user["name"],
+}, nil
+```
+
+This will complain, because the type returned is `any` (or `interface{}`), while we need a `string`.
+
+We can do a type assertion
+
+```go
+return &User{
+	Username: user["login"].(string),
+	Name:     user["name"].(string),
+}, nil
+```
+
+or even better we could map this struct with JSON tags.
+
+```go
+type User struct {
+	Username string `json:"login"`
+	Name     string `json:"name"`
 }
 ```
 
-and print some information about it
+Doing so we can say to the `json.Unmarshal` to map the fields into the corresponding variables, instead of using a generic map:
 
 ```go
-fmt.Printf("User '%v' (%v) found\n", user["login"], user["name"])
+user := &User{}
+err = json.Unmarshal(bodyBytes, user)
+if err != nil {
+	return nil, fmt.Errorf("unmarshalling the body: %w", err)
+}
+
+return user, nil
 ```
 
-## Wrap up
+Now from the `main()` we can simply create a `GithubService` and call the `GetUser` func:
 
-We have used some common functions of the standard library.
+```go
+func main() {
+	githubService := &GithubService{}
 
-### Bonus
+	user, err := githubService.GetUser("enrichman")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-After getting the response body you should call the `Close()` method. You can do this in a `defer`.  
-The deferred functions will be called when the surrounding function returns.
+	fmt.Printf("User '%v' (%v) found\n", user.Username, user.Name)
+}
+```
+
+Now if we run `go run main.go` it will fail, because we have more than one file. So we need to do a `go run ./...`.
 
 ```
-defer resp.Body.Close()
+-> % go run ./...  
+User 'enrichman' (Enrico Candino) found
 ```
