@@ -2,16 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"os"
 )
 
 func main() {
-	githubService := &GithubService{}
-
-	user, err := githubService.GetUser("enrichman")
-	if err != nil {
-		log.Fatal(err)
+	rootCmd := NewRootCmd()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-
-	fmt.Printf("User '%v' (%v) found\n", user.Username, user.Name)
 }
