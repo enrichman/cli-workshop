@@ -35,3 +35,40 @@ func (s *GithubService) GetUser(username string) (*User, error) {
 
 	return user, nil
 }
+
+type Repo struct {
+	ID       int    `json:"id"`
+	FullName string `json:"full_name"`
+	URL      string `json:"html_url"`
+	Language string `json:"language"`
+	Stars    int    `json:"stargazers_count"`
+}
+
+func (s *GithubService) Search(language string) ([]*Repo, error) {
+	url := fmt.Sprintf("https://api.github.com/search/repositories?q=language:%s", language)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("searching repositories: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading the body response: %w", err)
+	}
+
+	type SearchResponse struct {
+		TotalCount int     `json:"total_count"`
+		Items      []*Repo `json:"items"`
+	}
+
+	searchResponse := &SearchResponse{}
+	err = json.Unmarshal(bodyBytes, searchResponse)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshalling the body: %w", err)
+	}
+
+	fmt.Printf("found %d repositories\n", searchResponse.TotalCount)
+
+	return searchResponse.Items, nil
+}
