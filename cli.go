@@ -7,7 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewRootCmd() *cobra.Command {
+func NewRootCmd() (*cobra.Command, error) {
+	githubService, err := NewGithubService("https://api.github.com")
+	if err != nil {
+		return nil, err
+	}
+
 	rootCmd := &cobra.Command{
 		Use:   "stargazer",
 		Short: "Stargazer helps you starring Go repositories",
@@ -17,21 +22,19 @@ that helps you searching and starring Go repositories.`,
 	}
 
 	rootCmd.AddCommand(
-		NewUserCmd(),
-		NewSearchCmd(),
+		NewUserCmd(githubService),
+		NewSearchCmd(githubService),
 	)
 
-	return rootCmd
+	return rootCmd, nil
 }
 
-func NewUserCmd() *cobra.Command {
+func NewUserCmd(githubService *GithubService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "user",
 		Short: "User will get information of a github user",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			githubService := &GithubService{}
-
 			user, err := githubService.GetUser(args[0])
 			if err != nil {
 				log.Fatal(err)
@@ -42,15 +45,13 @@ func NewUserCmd() *cobra.Command {
 	}
 }
 
-func NewSearchCmd() *cobra.Command {
+func NewSearchCmd(githubService *GithubService) *cobra.Command {
 	var language string
 
 	searchCmd := &cobra.Command{
 		Use:   "search",
 		Short: "Search will look for interesting repositories in Github",
 		Run: func(cmd *cobra.Command, args []string) {
-			githubService := &GithubService{}
-
 			repos, err := githubService.Search(language)
 			if err != nil {
 				log.Fatal(err)
